@@ -1,4 +1,3 @@
-
 #include <cage-core/polyhedron.h>
 
 namespace unnatural
@@ -7,10 +6,9 @@ namespace unnatural
 
 	struct NavmeshOptimizationConfig
 	{
-		PolyhedronRegularizationConfig regularization;
-
-		NavmeshOptimizationConfig();
+		float targetScale = 1;
+		uint32 iterations = 20;
 	};
 
-	Holder<Polyhedron> navmeshOptimize(Holder<Polyhedron> &&nav, const NavmeshOptimizationConfig &cfg);
+	Holder<Polyhedron> navmeshOptimize(const Holder<Polyhedron> &nav, const NavmeshOptimizationConfig &cfg);
 }
