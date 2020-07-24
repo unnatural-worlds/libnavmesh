@@ -2,10 +2,11 @@
 
 namespace unnatural
 {
-	Holder<Polyhedron> navmeshOptimize(const Holder<Polyhedron> &nav, const NavmeshOptimizationConfig &cfg)
+	Holder<Polyhedron> navmeshOptimize(const Holder<Polyhedron> &nav, const NavmeshOptimizationConfig &cfg_)
 	{
 		CAGE_LOG(SeverityEnum::Info, "libnavmesh", "navigation optimization");
 
+		NavmeshOptimizationConfig cfg = cfg_;
 		NavigationData data;
 
 		{ // load
@@ -20,7 +21,10 @@ namespace unnatural
 					v.position = nav->position(i) * scale;
 					v.normal = nav->normal(i);
 					if (hasUv)
+					{
 						v.terrain = numeric_cast<uint8>(nav->uv(i)[0] * 32);
+						v.border = nav->uv(i)[1] > 0.5;
+					}
 				}
 			}
 
@@ -60,6 +64,8 @@ namespace unnatural
 					na.insert(b);
 					nb.insert(a);
 				}
+				cfg.pmpRegularization = false;
+				cfg.markBorderVertices = false;
 			} break;
 			default:
 				CAGE_THROW_ERROR(Exception, "unsupported polyhedron type");

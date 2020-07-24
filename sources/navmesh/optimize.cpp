@@ -23,9 +23,9 @@ namespace cage
 
 namespace
 {
-	constexpr float shortEdge = 0.55;
-	constexpr float longEdge = 1.3;
-	constexpr float longEdgeThreshold = 0.6;
+	constexpr float shortEdge = 0.55f;
+	constexpr float longEdge = 1.3f;
+	constexpr float longEdgeThreshold = 0.6f;
 
 	NavigationData navigation;
 	NavigationData origNeighs;
@@ -679,11 +679,16 @@ void optimizeNavigation(NavigationData &navigationParam, const NavmeshOptimizati
 	validateNavigationDebug();
 	joinIdenticalVertices();
 	printNavigationStatistics();
-	prepareOrigData();
-	pmpRegularization();
-	updateVertexPropertiesFromOrig();
-	markBorderVertices();
-	printNavigationStatistics();
+	if (cfg.pmpRegularization || cfg.iterations > 0)
+		prepareOrigData();
+	if (cfg.pmpRegularization)
+	{
+		pmpRegularization();
+		updateVertexPropertiesFromOrig();
+		printNavigationStatistics();
+	}
+	if (cfg.markBorderVertices)
+		markBorderVertices();
 	for (uint32 iteration = 0; iteration < cfg.iterations; iteration++)
 	{
 		CAGE_LOG(SeverityEnum::Info, "libnavmesh", stringizer() + "navmesh optimizing iteration: " + iteration);
