@@ -6,7 +6,7 @@ namespace unnatural
 
 	struct NavmeshOptimizationConfig
 	{
-		float targetScale = 1;
+		float tileSize = 10; // the goal, by default, is that average distance between any two neighbor tiles is 10 meters
 		uint32 iterations = 20;
 		bool pmpRegularization = true;
 		bool markBorderVertices = true;

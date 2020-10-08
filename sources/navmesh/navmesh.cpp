@@ -14,7 +14,7 @@ namespace unnatural
 
 			{ // vertices
 				const bool hasUv = !nav->uvs().empty();
-				const real scale = 1 / cfg.targetScale;
+				const real scale = 1 / cfg.tileSize;
 				for (uint32 i = 0; i < vc; i++)
 				{
 					auto &v = data[i];
@@ -82,7 +82,7 @@ namespace unnatural
 				std::vector<vec3> v;
 				v.reserve(data.size());
 				for (const auto &it : data)
-					v.push_back(it.second.position * cfg.targetScale);
+					v.push_back(it.second.position * cfg.tileSize);
 				res->positions(v);
 			}
 
