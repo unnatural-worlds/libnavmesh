@@ -80,9 +80,7 @@ namespace
 	void prepareOrigData()
 	{
 		origNeighs = navigation;
-		SpatialStructureCreateConfig sdcc;
-		sdcc.maxItems = 1000000;
-		origSpatData = newSpatialStructure(sdcc);
+		origSpatData = newSpatialStructure({});
 		origSpatQuery = newSpatialQuery(origSpatData.get());
 		for (const auto &it : navigation)
 			origSpatData->update(it.first, aabb(it.second.position));
