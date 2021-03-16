@@ -1,4 +1,7 @@
-#include <cage-core/polyhedron.h>
+#ifndef guard_navmesh_h_awsegersd4gh
+#define guard_navmesh_h_awsegersd4gh
+
+#include <cage-core/core.h>
 
 namespace unnatural
 {
@@ -12,5 +15,7 @@ namespace unnatural
 		bool markBorderVertices = true;
 	};
 
-	Holder<Polyhedron> navmeshOptimize(const Holder<Polyhedron> &nav, const NavmeshOptimizationConfig &cfg);
+	Holder<Polyhedron> navmeshOptimize(const Holder<Polyhedron> &navigation, const NavmeshOptimizationConfig &config);
 }
+
+#endif // guard_navmesh_h_awsegersd4gh
