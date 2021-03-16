@@ -1,3 +1,6 @@
+#include <cage-core/concurrent.h>
+#include <cage-core/threadPool.h>
+
 #include "navmesh.h"
 
 #include <unordered_set>
@@ -21,6 +24,9 @@ namespace navoptim
 	constexpr float shortEdge = 0.55f;
 	constexpr float longEdge = 1.3f;
 	constexpr float longEdgeThreshold = 0.6f;
+
+	Holder<Mutex> mutex = newMutex();
+	Holder<ThreadPool> threads = newThreadPool("libnavmesh_");
 
 	std::vector<uint32> sharedNeighbors(const Graph &graph, uint32 a, uint32 b)
 	{
@@ -71,7 +77,6 @@ namespace navoptim
 			{
 				static_assert(sizeof(FlatSet<uint32>) == sizeof(std::vector<uint32>));
 				auto &ns = reinterpret_cast<std::vector<uint32> &>(graph.neighbors[i]);
-				//ns.erase(std::remove_if(ns.begin(), ns.end(), [&](uint32 s) { return deleting[s]; }), ns.end());
 				for (uint32 &b : ns)
 					b -= remap[b];
 			}
@@ -120,63 +125,85 @@ namespace navoptim
 	void optimizeNodePositions(Graph &graph)
 	{
 		CAGE_LOG(SeverityEnum::Info, "libnavmesh", "optimizing node positions");
-		const uint32 count = numeric_cast<uint32>(graph.nodes.size());
 
-		std::vector<FlatSet<uint32>> nearby;
-		nearby.resize(count);
-		for (const auto &it : enumerate(graph.nodes))
+		struct Runner : Immovable
 		{
-			FlatSet<uint32> ngs = connectedNodes(graph, { numeric_cast<uint32>(it.index) });
-			ngs = connectedNodes(graph, ngs);
-			ngs = connectedNodes(graph, ngs);
-			ngs.erase(numeric_cast<uint32>(it.index));
-			nearby[it.index] = ngs;
-		}
+			Graph &graph;
+			std::vector<vec3> forces;
+			std::vector<FlatSet<uint32>> nearby;
+			const uint32 count = numeric_cast<uint32>(graph.nodes.size());
 
-		std::vector<vec3> forces;
-		forces.resize(count);
-
-		const auto &springForce = [](real x) -> real
-		{
-			const auto &a = [](real x) { return sin(rads(-real::Pi() * (x * 1.9 + 0.5))); };
-			const auto &b = [](real x) { return 1 / (x + 0.1); };
-			return a(x) * b(x);
-		};
-
-		for (uint32 iteration = 0; iteration < 13; iteration++)
-		{
-			CAGE_LOG_DEBUG(SeverityEnum::Info, "libnavmesh", stringizer() + "node positions, iteration: " + iteration);
-
-			for (uint32 a = 0; a < count; a++)
+			Runner(Graph &graph) : graph(graph)
 			{
-				if (graph.nodes[a].border)
-					continue; // border nodes do not move
-
-				const vec3 &ap = graph.nodes[a].position;
-				vec3 &force = forces[a];
-
-				// spring forces
-				for (uint32 b : nearby[a])
-				{
-					const vec3 &bp = graph.nodes[b].position;
-					const vec3 d = ap - bp;
-					const real l = length(d);
-					const real s = springForce(l);
-					force += normalize(d) * s;
-				}
-
-				// project the force into the plane of the node
-				const vec3 &n = graph.nodes[a].normal;
-				force -= n * dot(force, n);
+				threads->function.bind<Runner, &Runner::thrEntry>(this);
 			}
 
-			// apply the forces
-			for (uint32 a = 0; a < count; a++)
-				graph.nodes[a].position += forces[a] * 0.015;
+			static real springForce(real x)
+			{
+				const auto &a = [](real x) { return sin(rads(-real::Pi() * (x * 1.9 + 0.5))); };
+				const auto &b = [](real x) { return 1 / (x + 0.1); };
+				return a(x) * b(x);
+			};
 
-			// reset forces to zero
-			forces.clear();
-			forces.resize(count);
+			void thrEntry(uint32 thrIndex, uint32 thrCount)
+			{
+				uint32 begin = 0, end = 0;
+				threadPoolTasksSplit(thrIndex, thrCount, count, begin, end);
+
+				for (uint32 a = begin; a < end; a++)
+				{
+					if (graph.nodes[a].border)
+						continue; // border nodes do not move
+
+					const vec3 &ap = graph.nodes[a].position;
+					vec3 &force = forces[a];
+					force = vec3();
+
+					// spring forces
+					for (uint32 b : nearby[a])
+					{
+						const vec3 &bp = graph.nodes[b].position;
+						const vec3 d = ap - bp;
+						const real l = length(d);
+						const real s = springForce(l);
+						force += normalize(d) * s;
+					}
+
+					// project the force into the plane of the node
+					const vec3 &n = graph.nodes[a].normal;
+					force -= n * dot(force, n);
+				}
+			}
+
+			void run()
+			{
+				forces.resize(count);
+				nearby.resize(count);
+				for (const auto &it : enumerate(graph.nodes))
+				{
+					FlatSet<uint32> ngs = connectedNodes(graph, { numeric_cast<uint32>(it.index) });
+					ngs = connectedNodes(graph, ngs);
+					ngs = connectedNodes(graph, ngs);
+					ngs.erase(numeric_cast<uint32>(it.index));
+					nearby[it.index] = ngs;
+				}
+
+				for (uint32 iteration = 0; iteration < 13; iteration++)
+				{
+					CAGE_LOG_DEBUG(SeverityEnum::Info, "libnavmesh", stringizer() + "node positions, iteration: " + iteration);
+
+					threads->run();
+
+					// apply the forces
+					for (uint32 a = 0; a < count; a++)
+						graph.nodes[a].position += forces[a] * 0.015;
+				}
+			}
+		};
+
+		{
+			Runner runner(graph);
+			runner.run();
 		}
 
 		graphValidationDebugOnly(graph);
@@ -343,39 +370,73 @@ namespace navoptim
 		CAGE_LOG(SeverityEnum::Info, "libnavmesh", "removing suboptimal edges");
 		const uint32 initialEdgesCount = totalEdgesCount(graph);
 
-		std::unordered_set<std::pair<uint32, uint32>> deletions;
-		for (const auto &it : enumerate(graph.neighbors))
+		struct Runner
 		{
-			const vec3 &a = graph.nodes[it.index].position;
-			for (uint32 n1 : *it)
+			Graph &graph;
+			std::unordered_set<std::pair<uint32, uint32>> deletions;
+
+			Runner(Graph &graph) : graph(graph)
 			{
-				const vec3 &b = graph.nodes[n1].position;
-				const line rb = makeRay(a, b);
-				if (!rb.valid())
-					continue;
-				for (uint32 n2 : *it)
+				threads->function.bind<Runner, &Runner::thrEntry>(this);
+			}
+
+			void thrEntry(uint32 thrIndex, uint32 thrCount)
+			{
+				uint32 begin = 0, end = 0;
+				threadPoolTasksSplit(thrIndex, thrCount, numeric_cast<uint32>(graph.nodes.size()), begin, end);
+
+				std::unordered_set<std::pair<uint32, uint32>> dels;
+				dels.reserve(graph.neighbors.size() * 10 / thrCount);
+				for (uint32 index = begin; index < end; index++)
 				{
-					if (n1 >= n2)
-						continue;
-					const vec3 &c = graph.nodes[n2].position;
-					const line rc = makeRay(a, c);
-					if (!rc.valid())
-						continue;
-					//if (angle(rb, rc) < degs(35))
-					if (dot(rb.direction, rc.direction) > 0.8191520442) // cos(degs(35))
+					const vec3 &a = graph.nodes[index].position;
+					for (uint32 n1 : graph.neighbors[index])
 					{
-						const uint32 n = distanceSquared(a, b) > distanceSquared(a, c) ? n1 : n2;
-						const uint32 m = numeric_cast<uint32>(it.index);
-						deletions.emplace(min(m, n), max(m, n));
+						const vec3 &b = graph.nodes[n1].position;
+						const line rb = makeRay(a, b);
+						if (!rb.valid())
+							continue;
+						for (uint32 n2 : graph.neighbors[index])
+						{
+							if (n1 >= n2)
+								continue;
+							const vec3 &c = graph.nodes[n2].position;
+							const line rc = makeRay(a, c);
+							if (!rc.valid())
+								continue;
+							//if (angle(rb, rc) < degs(35))
+							if (dot(rb.direction, rc.direction) > 0.8191520442) // cos(degs(35))
+							{
+								const uint32 n = distanceSquared(a, b) > distanceSquared(a, c) ? n1 : n2;
+								dels.emplace(min(n, index), max(n, index));
+							}
+						}
 					}
 				}
-			}
-		}
 
-		for (const auto &it : deletions)
+				{
+					ScopeLock lock(mutex);
+					deletions.merge(dels);
+				}
+			}
+
+			void run()
+			{
+				deletions.reserve(graph.neighbors.size() * 10);
+
+				threads->run();
+
+				for (const auto &it : deletions)
+				{
+					graph.neighbors[it.first].erase(it.second);
+					graph.neighbors[it.second].erase(it.first);
+				}
+			}
+		};
+
 		{
-			graph.neighbors[it.first].erase(it.second);
-			graph.neighbors[it.second].erase(it.first);
+			Runner runner(graph);
+			runner.run();
 		}
 
 		graphValidationDebugOnly(graph);
@@ -407,51 +468,5 @@ namespace navoptim
 			it->normal = orig.normal;
 			it->terrain = orig.terrain;
 		}
-	}
-
-	void addCounterDiagonals(Graph &graph)
-	{
-		CAGE_LOG(SeverityEnum::Info, "libnavmesh", "adding counter-diagonal edges");
-		const uint32 initialEdgesCount = totalEdgesCount(graph);
-
-		std::unordered_set<std::pair<uint32, uint32>> additions;
-		const auto &diagonal = [&](uint32 a, uint32 b)
-		{
-			auto cs = sharedNeighbors(graph, a, b);
-			if (cs.size() == 2)
-				additions.emplace(cs[0], cs[1]);
-		};
-
-		const uint32 vertexCount = numeric_cast<uint32>(graph.nodes.size());
-		for (uint32 a = 0; a < vertexCount; a++)
-		{
-			const vec3 &ap = graph.nodes[a].position;
-			for (uint32 b : graph.neighbors[a])
-			{
-				const vec3 &bp = graph.nodes[b].position;
-				for (uint32 c : sharedNeighbors(graph, a, b))
-				{
-					const vec3 &cp = graph.nodes[c].position;
-					real ab = distanceSquared(ap, bp);
-					real ac = distanceSquared(ap, cp);
-					real bc = distanceSquared(bp, cp);
-					if (ab > ac && ab > bc)
-						diagonal(a, b);
-					else if (ac > ab && ac > bc)
-						diagonal(a, c);
-					else if (bc > ab && bc > ac)
-						diagonal(b, c);
-				}
-			}
-		}
-
-		for (const auto &it : additions)
-		{
-			graph.neighbors[it.first].insert(it.second);
-			graph.neighbors[it.second].insert(it.first);
-		}
-
-		graphValidationDebugOnly(graph);
-		CAGE_LOG(SeverityEnum::Info, "libnavmesh", stringizer() + "edges count: " + totalEdgesCount(graph) + " (was " + initialEdgesCount + ")");
 	}
 }
