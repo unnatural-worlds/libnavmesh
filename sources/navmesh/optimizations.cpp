@@ -101,6 +101,7 @@ namespace navoptim
 	{
 		// this MUST be done before the additional counter-diagonal links are added
 		CAGE_LOG(SeverityEnum::Info, "libnavmesh", "marking border vertices");
+
 		const auto &border = [&](uint32 a)
 		{
 			if (graph.neighbors[a].size() < 3)
@@ -119,6 +120,8 @@ namespace navoptim
 			if (it->border)
 				index++;
 		}
+
+		graphValidationDebugOnly(graph);
 		CAGE_LOG(SeverityEnum::Info, "libnavmesh", stringizer() + "borders count: " + index);
 	}
 

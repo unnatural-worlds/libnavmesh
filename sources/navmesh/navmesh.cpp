@@ -27,6 +27,7 @@ namespace unnatural
 		}
 
 		Graph graph = convertMeshToGraph(+nav, config.tileSize);
+		graphValidationUnconditional(graph); // input validation
 		printStatistics(graph);
 		const SpatialGraph original = convertToSpatialGraph(graph);
 
@@ -38,6 +39,7 @@ namespace unnatural
 			cfg.iterations = 10;
 			polyhedronRegularize(+nav, cfg);
 			graph = convertMeshToGraph(+nav, config.tileSize);
+			graphValidationDebugOnly(graph);
 			printStatistics(graph);
 		}
 		else
@@ -61,7 +63,7 @@ namespace unnatural
 		}
 
 		CAGE_LOG(SeverityEnum::Info, "libnavmesh", "finishing navigation optimization");
-		graphValidationUnconditional(graph);
+		graphValidationUnconditional(graph); // output validation
 		nav = convertGraphToMesh(graph, config.tileSize);
 		return nav;
 	}

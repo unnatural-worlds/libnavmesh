@@ -1,5 +1,7 @@
 #include "navmesh.h"
 
+#include <set>
+
 namespace navoptim
 {
 	Graph convertMeshToGraph(const Polyhedron *poly, real tileSize)
@@ -175,6 +177,8 @@ namespace navoptim
 
 	void graphValidationUnconditional(const Graph &graph)
 	{
+		if (graph.nodes.empty())
+			CAGE_THROW_ERROR(Exception, "validation error: graph is empty");
 		if (graph.neighbors.size() != graph.nodes.size())
 			CAGE_THROW_ERROR(Exception, "validation error: inconsistent array sizes");
 		for (const auto &n : graph.nodes)
@@ -196,6 +200,31 @@ namespace navoptim
 					CAGE_THROW_ERROR(Exception, "validation error: edge is missing counterpart");
 				if (a.index == b)
 					CAGE_THROW_ERROR(Exception, "validation error: edge to itself");
+			}
+		}
+		{ // check that the whole graph is single connected component
+			std::vector<bool> visited;
+			visited.resize(graph.nodes.size(), false);
+			visited[0] = true;
+			std::set<uint32> open;
+			open.insert(0);
+			while (!open.empty())
+			{
+				const uint32 n = *open.begin();
+				open.erase(open.begin());
+				CAGE_ASSERT(visited[n]);
+				for (uint32 i : graph.neighbors[n])
+				{
+					if (visited[i])
+						continue;
+					visited[i] = true;
+					open.insert(i);
+				}
+			}
+			for (bool v : visited)
+			{
+				if (!v)
+					CAGE_THROW_ERROR(Exception, "validation error: disconnected component");
 			}
 		}
 	}
