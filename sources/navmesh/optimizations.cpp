@@ -25,8 +25,18 @@ namespace navoptim
 	constexpr float longEdge = 1.3f;
 	constexpr float longEdgeThreshold = 0.6f;
 
-	Holder<Mutex> mutex = newMutex();
-	Holder<ThreadPool> threads = newThreadPool("libnavmesh_");
+	Holder<Mutex> mutex;
+	Holder<ThreadPool> threads;
+
+	void threadsInit()
+	{
+		static int i = []()
+		{
+			mutex = newMutex();
+			threads = newThreadPool("libnavmesh_");
+			return 0;
+		}();
+	}
 
 	std::vector<uint32> sharedNeighbors(const Graph &graph, uint32 a, uint32 b)
 	{
@@ -138,6 +148,7 @@ namespace navoptim
 
 			Runner(Graph &graph) : graph(graph)
 			{
+				threadsInit();
 				threads->function.bind<Runner, &Runner::thrEntry>(this);
 			}
 
@@ -380,6 +391,7 @@ namespace navoptim
 
 			Runner(Graph &graph) : graph(graph)
 			{
+				threadsInit();
 				threads->function.bind<Runner, &Runner::thrEntry>(this);
 			}
 
