@@ -56,8 +56,6 @@ namespace navoptim
 	void joinCloseNodes(Graph &graph);
 	void removeSuboptimalEdges(Graph &graph);
 	void updateNodeProperties(Graph &graph, const SpatialGraph &original);
-
-	void addCounterDiagonals(Graph &graph);
 }
 
 #endif // guard_navmesh_private_h_sd5rf4gzhdrtg
