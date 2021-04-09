@@ -4,7 +4,7 @@
 
 namespace navoptim
 {
-	Graph convertMeshToGraph(const Polyhedron *poly, real tileSize)
+	Graph convertMeshToGraph(const Mesh *poly, real tileSize)
 	{
 		Graph res;
 
@@ -33,7 +33,7 @@ namespace navoptim
 		// indices
 		switch (poly->type())
 		{
-		case PolyhedronTypeEnum::Triangles:
+		case MeshTypeEnum::Triangles:
 		{
 			const uint32 tc = poly->indicesCount() / 3;
 			const auto inds = poly->indices();
@@ -53,7 +53,7 @@ namespace navoptim
 				nc.insert(b);
 			}
 		} break;
-		case PolyhedronTypeEnum::Lines:
+		case MeshTypeEnum::Lines:
 		{
 			const uint32 lc = poly->indicesCount() / 2;
 			const auto inds = poly->indices();
@@ -66,16 +66,16 @@ namespace navoptim
 			}
 		} break;
 		default:
-			CAGE_THROW_ERROR(Exception, "unsupported polyhedron type");
+			CAGE_THROW_ERROR(Exception, "unsupported mesh type");
 		}
 
 		return res;
 	}
 
-	Holder<Polyhedron> convertGraphToMesh(const Graph &graph, real tileSize)
+	Holder<Mesh> convertGraphToMesh(const Graph &graph, real tileSize)
 	{
-		Holder<Polyhedron> res = newPolyhedron();
-		res->type(PolyhedronTypeEnum::Lines);
+		Holder<Mesh> res = newMesh();
+		res->type(MeshTypeEnum::Lines);
 
 		{ // positions
 			std::vector<vec3> v;

@@ -4,26 +4,26 @@ namespace unnatural
 {
 	using namespace navoptim;
 
-	Holder<Polyhedron> navmeshOptimize(const Holder<Polyhedron> &navigation, const NavmeshOptimizationConfig &config)
+	Holder<Mesh> navmeshOptimize(const Holder<Mesh> &navigation, const NavmeshOptimizationConfig &config)
 	{
 		CAGE_LOG(SeverityEnum::Info, "libnavmesh", "initiating navigation optimization");
 
 		switch (navigation->type())
 		{
-		case PolyhedronTypeEnum::Triangles:
-		case PolyhedronTypeEnum::Lines:
+		case MeshTypeEnum::Triangles:
+		case MeshTypeEnum::Lines:
 			break;
 		default:
-			CAGE_THROW_ERROR(Exception, "unsupported polyhedron type");
+			CAGE_THROW_ERROR(Exception, "unsupported mesh type");
 		}
 
-		Holder<Polyhedron> nav = navigation->copy();
+		Holder<Mesh> nav = navigation->copy();
 		
 		{
 			CAGE_LOG(SeverityEnum::Info, "libnavmesh", "merging close vertices");
-			PolyhedronCloseVerticesMergingConfig cfg;
+			MeshCloseVerticesMergingConfig cfg;
 			cfg.distanceThreshold = 1e-3;
-			polyhedronMergeCloseVertices(+nav, cfg);
+			meshMergeCloseVertices(+nav, cfg);
 		}
 
 		Graph graph = convertMeshToGraph(+nav, config.tileSize);
@@ -31,13 +31,13 @@ namespace unnatural
 		printStatistics(graph);
 		const SpatialGraph original = convertToSpatialGraph(graph);
 
-		if (nav->type() == PolyhedronTypeEnum::Triangles && config.pmpRegularization)
+		if (nav->type() == MeshTypeEnum::Triangles && config.pmpRegularization)
 		{
 			CAGE_LOG(SeverityEnum::Info, "libnavmesh", "initial regularization");
-			PolyhedronRegularizationConfig cfg;
+			MeshRegularizationConfig cfg;
 			cfg.targetEdgeLength = config.tileSize;
 			cfg.iterations = 10;
-			polyhedronRegularize(+nav, cfg);
+			meshRegularize(+nav, cfg);
 			graph = convertMeshToGraph(+nav, config.tileSize);
 			graphValidationDebugOnly(graph);
 			printStatistics(graph);
@@ -45,7 +45,7 @@ namespace unnatural
 		else
 			CAGE_LOG(SeverityEnum::Info, "libnavmesh", "skipping initial regularization");
 
-		if (nav->type() == PolyhedronTypeEnum::Triangles && config.markBorderVertices)
+		if (nav->type() == MeshTypeEnum::Triangles && config.markBorderVertices)
 			markBorderNodes(graph);
 		else
 			CAGE_LOG(SeverityEnum::Info, "libnavmesh", "skipping marking border nodes");

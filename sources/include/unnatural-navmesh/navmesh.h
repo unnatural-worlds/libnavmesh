@@ -15,7 +15,7 @@ namespace unnatural
 		bool markBorderVertices = true;
 	};
 
-	Holder<Polyhedron> navmeshOptimize(const Holder<Polyhedron> &navigation, const NavmeshOptimizationConfig &config);
+	Holder<Mesh> navmeshOptimize(const Holder<Mesh> &navigation, const NavmeshOptimizationConfig &config);
 }
 
 #endif // guard_navmesh_h_awsegersd4gh

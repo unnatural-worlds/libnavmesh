@@ -2,7 +2,7 @@
 #define guard_navmesh_private_h_sd5rf4gzhdrtg
 
 #include <cage-core/flatSet.h>
-#include <cage-core/polyhedron.h>
+#include <cage-core/mesh.h>
 #include <cage-core/geometry.h>
 #include <cage-core/enumerate.h>
 #include <cage-core/spatialStructure.h>
@@ -35,8 +35,8 @@ namespace navoptim
 		Holder<SpatialQuery> spatialQuery;
 	};
 
-	Graph convertMeshToGraph(const Polyhedron *poly, real tileSize);
-	Holder<Polyhedron> convertGraphToMesh(const Graph &graph, real tileSize);
+	Graph convertMeshToGraph(const Mesh *poly, real tileSize);
+	Holder<Mesh> convertGraphToMesh(const Graph &graph, real tileSize);
 	const SpatialGraph convertToSpatialGraph(const Graph &graph);
 
 	void printStatistics(const Graph &graph);
