@@ -408,7 +408,7 @@ namespace navoptim
 					for (uint32 n1 : graph.neighbors[index])
 					{
 						const vec3 &b = graph.nodes[n1].position;
-						const line rb = makeRay(a, b);
+						const Line rb = makeRay(a, b);
 						if (!rb.valid())
 							continue;
 						for (uint32 n2 : graph.neighbors[index])
@@ -416,7 +416,7 @@ namespace navoptim
 							if (n1 >= n2)
 								continue;
 							const vec3 &c = graph.nodes[n2].position;
-							const line rc = makeRay(a, c);
+							const Line rc = makeRay(a, c);
 							if (!rc.valid())
 								continue;
 							//if (angle(rb, rc) < degs(35))
@@ -464,7 +464,7 @@ namespace navoptim
 	{
 		for (const auto &it : enumerate(graph.nodes))
 		{
-			original.spatialQuery->intersection(sphere(it->position, 3));
+			original.spatialQuery->intersection(Sphere(it->position, 3));
 			const auto &res = original.spatialQuery->result();
 			if (res.size() == 0)
 				CAGE_THROW_ERROR(Exception, "navigation node too far from any original vertex");

@@ -135,7 +135,7 @@ namespace navoptim
 		res.spatialData = newSpatialStructure({});
 		res.spatialQuery = newSpatialQuery(+res.spatialData);
 		for (const auto &it : enumerate(res.nodes))
-			res.spatialData->update(numeric_cast<uint32>(it.index), aabb(it->position));
+			res.spatialData->update(numeric_cast<uint32>(it.index), Aabb(it->position));
 		res.spatialData->rebuild();
 		return res;
 	}
