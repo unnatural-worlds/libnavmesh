@@ -4,7 +4,7 @@ namespace unnatural
 {
 	using namespace navoptim;
 
-	Holder<Mesh> navmeshOptimize(const Holder<Mesh> &navigation, const NavmeshOptimizationConfig &config)
+	Holder<Mesh> navmeshOptimize(const Holder<Mesh> &navigation, const NavmeshOptimizeConfig &config)
 	{
 		CAGE_LOG(SeverityEnum::Info, "libnavmesh", "initiating navigation optimization");
 
@@ -21,7 +21,7 @@ namespace unnatural
 		
 		{
 			CAGE_LOG(SeverityEnum::Info, "libnavmesh", "merging close vertices");
-			MeshCloseVerticesMergingConfig cfg;
+			MeshMergeCloseVerticesConfig cfg;
 			cfg.distanceThreshold = 1e-3;
 			meshMergeCloseVertices(+nav, cfg);
 		}
@@ -34,7 +34,7 @@ namespace unnatural
 		if (nav->type() == MeshTypeEnum::Triangles && config.pmpRegularization)
 		{
 			CAGE_LOG(SeverityEnum::Info, "libnavmesh", "initial regularization");
-			MeshRegularizationConfig cfg;
+			MeshRegularizeConfig cfg;
 			cfg.targetEdgeLength = config.tileSize;
 			cfg.iterations = 10;
 			meshRegularize(+nav, cfg);
