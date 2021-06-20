@@ -133,7 +133,7 @@ namespace navoptim
 		res.nodes = graph.nodes;
 		res.neighbors = graph.neighbors;
 		res.spatialData = newSpatialStructure({});
-		res.spatialQuery = newSpatialQuery(+res.spatialData);
+		res.spatialQuery = newSpatialQuery(res.spatialData.share());
 		for (const auto &it : enumerate(res.nodes))
 			res.spatialData->update(numeric_cast<uint32>(it.index), Aabb(it->position));
 		res.spatialData->rebuild();
