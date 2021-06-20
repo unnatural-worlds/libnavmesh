@@ -85,9 +85,7 @@ namespace navoptim
 				remap[i] += remap[i - 1];
 			for (uint32 i = 0; i < initialNodesCount; i++)
 			{
-				static_assert(sizeof(FlatSet<uint32>) == sizeof(std::vector<uint32>));
-				auto &ns = reinterpret_cast<std::vector<uint32> &>(graph.neighbors[i]);
-				for (uint32 &b : ns)
+				for (uint32 &b : graph.neighbors[i].unsafeData())
 					b -= remap[b];
 			}
 		}
