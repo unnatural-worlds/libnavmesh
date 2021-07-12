@@ -1,5 +1,5 @@
 #include <cage-core/concurrent.h>
-#include <cage-core/threadPool.h>
+#include <cage-core/tasks.h>
 
 #include "navmesh.h"
 
@@ -21,22 +21,9 @@ namespace std
 
 namespace navoptim
 {
-	constexpr float shortEdge = 0.55f;
-	constexpr float longEdge = 1.3f;
-	constexpr float longEdgeThreshold = 0.6f;
-
-	Holder<Mutex> mutex;
-	Holder<ThreadPool> threads;
-
-	void threadsInit()
-	{
-		static int i = []()
-		{
-			mutex = newMutex();
-			threads = newThreadPool("libnavmesh_");
-			return 0;
-		}();
-	}
+	constexpr real shortEdge = 0.55f;
+	constexpr real longEdge = 1.3f;
+	constexpr real longEdgeThreshold = 0.6f;
 
 	std::vector<uint32> sharedNeighbors(const Graph &graph, uint32 a, uint32 b)
 	{
@@ -145,10 +132,7 @@ namespace navoptim
 			const uint32 count = numeric_cast<uint32>(graph.nodes.size());
 
 			Runner(Graph &graph) : graph(graph)
-			{
-				threadsInit();
-				threads->function.bind<Runner, &Runner::thrEntry>(this);
-			}
+			{}
 
 			static real springForce(real x)
 			{
@@ -157,12 +141,10 @@ namespace navoptim
 				return a(x) * b(x);
 			};
 
-			void thrEntry(uint32 thrIndex, uint32 thrCount)
+			void operator()(uint32 invocation)
 			{
-				uint32 begin = 0, end = 0;
-				threadPoolTasksSplit(thrIndex, thrCount, count, begin, end);
-
-				for (uint32 a = begin; a < end; a++)
+				const auto range = tasksSplit(invocation, processorsCount(), count);
+				for (uint32 a = range.first; a < range.second; a++)
 				{
 					if (graph.nodes[a].border)
 						continue; // border nodes do not move
@@ -204,7 +186,7 @@ namespace navoptim
 				{
 					CAGE_LOG_DEBUG(SeverityEnum::Info, "libnavmesh", stringizer() + "node positions, iteration: " + iteration);
 
-					threads->run();
+					tasksRun<Runner>(*this, processorsCount(), 5);
 
 					// apply the forces
 					for (uint32 a = 0; a < count; a++)
@@ -386,21 +368,18 @@ namespace navoptim
 		{
 			Graph &graph;
 			std::unordered_set<std::pair<uint32, uint32>> deletions;
+			Holder<Mutex> mutex = newMutex();
 
 			Runner(Graph &graph) : graph(graph)
-			{
-				threadsInit();
-				threads->function.bind<Runner, &Runner::thrEntry>(this);
-			}
+			{}
 
-			void thrEntry(uint32 thrIndex, uint32 thrCount)
+			void operator()(uint32 invocation)
 			{
-				uint32 begin = 0, end = 0;
-				threadPoolTasksSplit(thrIndex, thrCount, numeric_cast<uint32>(graph.nodes.size()), begin, end);
-
 				std::unordered_set<std::pair<uint32, uint32>> dels;
-				dels.reserve(graph.neighbors.size() * 10 / thrCount);
-				for (uint32 index = begin; index < end; index++)
+				dels.reserve(graph.neighbors.size());
+
+				const auto range = tasksSplit(invocation, processorsCount(), numeric_cast<uint32>(graph.nodes.size()));
+				for (uint32 index = range.first; index < range.second; index++)
 				{
 					const vec3 &a = graph.nodes[index].position;
 					for (uint32 n1 : graph.neighbors[index])
@@ -431,13 +410,15 @@ namespace navoptim
 					ScopeLock lock(mutex);
 					deletions.merge(dels);
 				}
+
+				dels.clear();
 			}
 
 			void run()
 			{
 				deletions.reserve(graph.neighbors.size() * 10);
 
-				threads->run();
+				tasksRun<Runner>(*this, processorsCount(), 5);
 
 				for (const auto &it : deletions)
 				{
