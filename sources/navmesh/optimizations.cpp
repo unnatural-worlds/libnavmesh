@@ -186,7 +186,7 @@ namespace navoptim
 				{
 					CAGE_LOG_DEBUG(SeverityEnum::Info, "libnavmesh", stringizer() + "node positions, iteration: " + iteration);
 
-					tasksRun<Runner>(*this, processorsCount(), 5);
+					tasksRunBlocking<Runner>("optimizing node positions",  * this, processorsCount(), 5);
 
 					// apply the forces
 					for (uint32 a = 0; a < count; a++)
@@ -418,7 +418,7 @@ namespace navoptim
 			{
 				deletions.reserve(graph.neighbors.size() * 10);
 
-				tasksRun<Runner>(*this, processorsCount(), 5);
+				tasksRunBlocking<Runner>("removing suboptimal edges", * this, processorsCount(), 5);
 
 				for (const auto &it : deletions)
 				{
