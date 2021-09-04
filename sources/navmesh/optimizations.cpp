@@ -21,9 +21,9 @@ namespace std
 
 namespace navoptim
 {
-	constexpr real shortEdge = 0.55f;
-	constexpr real longEdge = 1.3f;
-	constexpr real longEdgeThreshold = 0.6f;
+	constexpr Real shortEdge = 0.55f;
+	constexpr Real longEdge = 1.3f;
+	constexpr Real longEdgeThreshold = 0.6f;
 
 	std::vector<uint32> sharedNeighbors(const Graph &graph, uint32 a, uint32 b)
 	{
@@ -89,7 +89,7 @@ namespace navoptim
 		}
 
 		graphValidationDebugOnly(graph);
-		CAGE_LOG(SeverityEnum::Info, "libnavmesh", stringizer() + "nodes count: " + graph.nodes.size() + " (was " + initialNodesCount + ")");
+		CAGE_LOG(SeverityEnum::Info, "libnavmesh", Stringizer() + "nodes count: " + graph.nodes.size() + " (was " + initialNodesCount + ")");
 	}
 
 	void markBorderNodes(Graph &graph)
@@ -117,7 +117,7 @@ namespace navoptim
 		}
 
 		graphValidationDebugOnly(graph);
-		CAGE_LOG(SeverityEnum::Info, "libnavmesh", stringizer() + "borders count: " + index);
+		CAGE_LOG(SeverityEnum::Info, "libnavmesh", Stringizer() + "borders count: " + index);
 	}
 
 	void optimizeNodePositions(Graph &graph)
@@ -127,17 +127,17 @@ namespace navoptim
 		struct Runner : Immovable
 		{
 			Graph &graph;
-			std::vector<vec3> forces;
+			std::vector<Vec3> forces;
 			std::vector<FlatSet<uint32>> nearby;
 			const uint32 count = numeric_cast<uint32>(graph.nodes.size());
 
 			Runner(Graph &graph) : graph(graph)
 			{}
 
-			static real springForce(real x)
+			static Real springForce(Real x)
 			{
-				const auto &a = [](real x) { return sin(rads(-real::Pi() * (x * 1.9 + 0.5))); };
-				const auto &b = [](real x) { return 1 / (x + 0.1); };
+				const auto &a = [](Real x) { return sin(Rads(-Real::Pi() * (x * 1.9 + 0.5))); };
+				const auto &b = [](Real x) { return 1 / (x + 0.1); };
 				return a(x) * b(x);
 			};
 
@@ -149,22 +149,22 @@ namespace navoptim
 					if (graph.nodes[a].border)
 						continue; // border nodes do not move
 
-					const vec3 &ap = graph.nodes[a].position;
-					vec3 &force = forces[a];
-					force = vec3();
+					const Vec3 &ap = graph.nodes[a].position;
+					Vec3 &force = forces[a];
+					force = Vec3();
 
 					// spring forces
 					for (uint32 b : nearby[a])
 					{
-						const vec3 &bp = graph.nodes[b].position;
-						const vec3 d = ap - bp;
-						const real l = length(d);
-						const real s = springForce(l);
+						const Vec3 &bp = graph.nodes[b].position;
+						const Vec3 d = ap - bp;
+						const Real l = length(d);
+						const Real s = springForce(l);
 						force += normalize(d) * s;
 					}
 
 					// project the force into the plane of the node
-					const vec3 &n = graph.nodes[a].normal;
+					const Vec3 &n = graph.nodes[a].normal;
 					force -= n * dot(force, n);
 				}
 			}
@@ -184,7 +184,7 @@ namespace navoptim
 
 				for (uint32 iteration = 0; iteration < 13; iteration++)
 				{
-					CAGE_LOG_DEBUG(SeverityEnum::Info, "libnavmesh", stringizer() + "node positions, iteration: " + iteration);
+					CAGE_LOG_DEBUG(SeverityEnum::Info, "libnavmesh", Stringizer() + "node positions, iteration: " + iteration);
 
 					tasksRunBlocking<Runner>("optimizing node positions",  * this, processorsCount(), 5);
 
@@ -231,7 +231,7 @@ namespace navoptim
 		}
 
 		graphValidationDebugOnly(graph);
-		CAGE_LOG(SeverityEnum::Info, "libnavmesh", stringizer() + "edges count: " + totalEdgesCount(graph) + " (was " + initialEdgesCount + ")");
+		CAGE_LOG(SeverityEnum::Info, "libnavmesh", Stringizer() + "edges count: " + totalEdgesCount(graph) + " (was " + initialEdgesCount + ")");
 	}
 
 	void splitLongEdges(Graph &graph)
@@ -242,16 +242,16 @@ namespace navoptim
 		std::unordered_set<std::pair<uint32, uint32>> additions;
 		for (uint32 a = 0; a < initialNodesCount; a++)
 		{
-			const vec3 &ap = graph.nodes[a].position;
+			const Vec3 &ap = graph.nodes[a].position;
 			const FlatSet<uint32> &aNs = graph.neighbors[a];
 			for (uint32 b : aNs)
 			{
 				if (a >= b)
 					continue;
-				const vec3 &bp = graph.nodes[b].position;
+				const Vec3 &bp = graph.nodes[b].position;
 				if (distanceSquared(ap, bp) < sqr(longEdge))
 					continue;
-				const vec3 mp = (ap + bp) * 0.5;
+				const Vec3 mp = (ap + bp) * 0.5;
 				bool ok = true;
 				for (uint32 c : aNs)
 				{
@@ -305,7 +305,7 @@ namespace navoptim
 		}
 
 		graphValidationDebugOnly(graph);
-		CAGE_LOG(SeverityEnum::Info, "libnavmesh", stringizer() + "nodes count: " + graph.nodes.size() + " (was " + initialNodesCount + ")");
+		CAGE_LOG(SeverityEnum::Info, "libnavmesh", Stringizer() + "nodes count: " + graph.nodes.size() + " (was " + initialNodesCount + ")");
 	}
 
 	void joinCloseNodes(Graph &graph)
@@ -317,12 +317,12 @@ namespace navoptim
 		for (const auto &it : enumerate(graph.neighbors))
 		{
 			const uint32 a = numeric_cast<uint32>(it.index);
-			const vec3 &ap = graph.nodes[a].position;
+			const Vec3 &ap = graph.nodes[a].position;
 			for (uint32 b : *it)
 			{
 				if (a >= b)
 					continue;
-				const vec3 &bp = graph.nodes[b].position;
+				const Vec3 &bp = graph.nodes[b].position;
 				if (distanceSquared(ap, bp) < sqr(shortEdge))
 					joins[b] = a;
 			}
@@ -381,10 +381,10 @@ namespace navoptim
 				const auto range = tasksSplit(invocation, processorsCount(), numeric_cast<uint32>(graph.nodes.size()));
 				for (uint32 index = range.first; index < range.second; index++)
 				{
-					const vec3 &a = graph.nodes[index].position;
+					const Vec3 &a = graph.nodes[index].position;
 					for (uint32 n1 : graph.neighbors[index])
 					{
-						const vec3 &b = graph.nodes[n1].position;
+						const Vec3 &b = graph.nodes[n1].position;
 						const Line rb = makeRay(a, b);
 						if (!rb.valid())
 							continue;
@@ -392,12 +392,12 @@ namespace navoptim
 						{
 							if (n1 >= n2)
 								continue;
-							const vec3 &c = graph.nodes[n2].position;
+							const Vec3 &c = graph.nodes[n2].position;
 							const Line rc = makeRay(a, c);
 							if (!rc.valid())
 								continue;
-							//if (angle(rb, rc) < degs(35))
-							if (dot(rb.direction, rc.direction) > 0.8191520442) // cos(degs(35))
+							
+							if (dot(rb.direction, rc.direction) > 0.8191520442) 
 							{
 								const uint32 n = distanceSquared(a, b) > distanceSquared(a, c) ? n1 : n2;
 								dels.emplace(min(n, index), max(n, index));
@@ -434,7 +434,7 @@ namespace navoptim
 		}
 
 		graphValidationDebugOnly(graph);
-		CAGE_LOG(SeverityEnum::Info, "libnavmesh", stringizer() + "edges count: " + totalEdgesCount(graph) + " (was " + initialEdgesCount + ")");
+		CAGE_LOG(SeverityEnum::Info, "libnavmesh", Stringizer() + "edges count: " + totalEdgesCount(graph) + " (was " + initialEdgesCount + ")");
 
 		removeEmptyNodes(graph);
 	}
@@ -448,10 +448,10 @@ namespace navoptim
 			if (res.size() == 0)
 				CAGE_THROW_ERROR(Exception, "navigation node too far from any original vertex");
 			uint32 bestIndex = m;
-			real bestDist = real::Infinity();
+			Real bestDist = Real::Infinity();
 			for (const auto &on : res)
 			{
-				real d = distanceSquared(original.nodes.at(on).position, it->position);
+				Real d = distanceSquared(original.nodes.at(on).position, it->position);
 				if (d < bestDist)
 				{
 					bestDist = d;

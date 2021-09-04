@@ -4,12 +4,12 @@
 
 namespace navoptim
 {
-	Graph convertMeshToGraph(const Mesh *poly, real tileSize)
+	Graph convertMeshToGraph(const Mesh *poly, Real tileSize)
 	{
 		Graph res;
 
 		{ // vertices
-			const real scale = 1 / tileSize;
+			const Real scale = 1 / tileSize;
 			const bool hasUv = !poly->uvs().empty();
 			const uint32 vc = poly->verticesCount();
 			res.nodes.reserve(vc);
@@ -72,13 +72,13 @@ namespace navoptim
 		return res;
 	}
 
-	Holder<Mesh> convertGraphToMesh(const Graph &graph, real tileSize)
+	Holder<Mesh> convertGraphToMesh(const Graph &graph, Real tileSize)
 	{
 		Holder<Mesh> res = newMesh();
 		res->type(MeshTypeEnum::Lines);
 
 		{ // positions
-			std::vector<vec3> v;
+			std::vector<Vec3> v;
 			v.reserve(graph.nodes.size());
 			for (const auto &it : graph.nodes)
 				v.push_back(it.position * tileSize);
@@ -86,7 +86,7 @@ namespace navoptim
 		}
 
 		{ // normals
-			std::vector<vec3> v;
+			std::vector<Vec3> v;
 			v.reserve(graph.nodes.size());
 			for (const auto &it : graph.nodes)
 				v.push_back(it.normal);
@@ -94,12 +94,12 @@ namespace navoptim
 		}
 
 		{ // uvs
-			std::vector<vec2> v;
+			std::vector<Vec2> v;
 			v.reserve(graph.nodes.size());
 			for (const auto &it : graph.nodes)
 			{
-				vec2 u;
-				u[0] = (real(it.terrain) + 0.5) / 32;
+				Vec2 u;
+				u[0] = (Real(it.terrain) + 0.5) / 32;
 				u[1] = it.border;
 				v.push_back(u);
 			}
@@ -142,37 +142,37 @@ namespace navoptim
 
 	void printStatistics(const Graph &graph)
 	{
-		real lenSum;
-		real lenMin = real::Infinity();
-		real lenMax;
+		Real lenSum;
+		Real lenMin = Real::Infinity();
+		Real lenMax;
 		uint32 nghCnt = 0;
 		for (const auto &a : enumerate(graph.neighbors))
 		{
 			for (uint32 b : *a)
 			{
-				const real d = distance(graph.nodes[a.index].position, graph.nodes[b].position);
+				const Real d = distance(graph.nodes[a.index].position, graph.nodes[b].position);
 				lenSum += d;
 				lenMin = min(lenMin, d);
 				lenMax = max(lenMax, d);
 				nghCnt++;
 			}
 		}
-		CAGE_LOG(SeverityEnum::Info, "libnavmesh", stringizer() + "edge length minimum: " + lenMin + ", maximum: " + lenMax);
-		real lenAvg = lenSum / nghCnt;
-		real devSum1 = 0;
-		real devSum2 = 0;
+		CAGE_LOG(SeverityEnum::Info, "libnavmesh", Stringizer() + "edge length minimum: " + lenMin + ", maximum: " + lenMax);
+		Real lenAvg = lenSum / nghCnt;
+		Real devSum1 = 0;
+		Real devSum2 = 0;
 		for (const auto &a : enumerate(graph.neighbors))
 		{
 			for (uint32 b : *a)
 			{
-				const real d = distance(graph.nodes[a.index].position, graph.nodes[b].position);
+				const Real d = distance(graph.nodes[a.index].position, graph.nodes[b].position);
 				devSum1 += abs(d - lenAvg);
 				devSum2 += abs(d - 1);
 			}
 		}
-		real devAvg1 = devSum1 / nghCnt;
-		real devAvg2 = devSum2 / nghCnt;
-		CAGE_LOG(SeverityEnum::Info, "libnavmesh", stringizer() + "edge length average: " + lenAvg + ", deviation: " + devAvg1 + ", unfitness: " + devAvg2);
+		Real devAvg1 = devSum1 / nghCnt;
+		Real devAvg2 = devSum2 / nghCnt;
+		CAGE_LOG(SeverityEnum::Info, "libnavmesh", Stringizer() + "edge length average: " + lenAvg + ", deviation: " + devAvg1 + ", unfitness: " + devAvg2);
 	}
 
 	void graphValidationUnconditional(const Graph &graph)

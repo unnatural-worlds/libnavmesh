@@ -52,7 +52,7 @@ namespace unnatural
 
 		for (uint32 iteration = 0; iteration < config.iterations; iteration++)
 		{
-			CAGE_LOG(SeverityEnum::Info, "libnavmesh", stringizer() + "navmesh optimizing iteration: " + iteration);
+			CAGE_LOG(SeverityEnum::Info, "libnavmesh", Stringizer() + "navmesh optimizing iteration: " + iteration);
 			optimizeNodePositions(graph);
 			addNeighborEdges(graph);
 			splitLongEdges(graph);

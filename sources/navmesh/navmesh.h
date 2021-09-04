@@ -17,8 +17,8 @@ namespace navoptim
 
 	struct Node
 	{
-		vec3 position;
-		vec3 normal;
+		Vec3 position;
+		Vec3 normal;
 		uint8 terrain = 0; // terrain type index
 		bool border = false;
 	};
@@ -35,8 +35,8 @@ namespace navoptim
 		Holder<SpatialQuery> spatialQuery;
 	};
 
-	Graph convertMeshToGraph(const Mesh *poly, real tileSize);
-	Holder<Mesh> convertGraphToMesh(const Graph &graph, real tileSize);
+	Graph convertMeshToGraph(const Mesh *poly, Real tileSize);
+	Holder<Mesh> convertGraphToMesh(const Graph &graph, Real tileSize);
 	const SpatialGraph convertToSpatialGraph(const Graph &graph);
 
 	void printStatistics(const Graph &graph);
