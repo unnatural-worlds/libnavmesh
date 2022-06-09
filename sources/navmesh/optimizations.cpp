@@ -80,12 +80,12 @@ namespace navoptim
 		{
 			auto &ns = graph.nodes;
 			auto it = deleting.begin();
-			ns.erase(std::remove_if(ns.begin(), ns.end(), [&](const Node &) { return *it++; }), ns.end());
+			std::erase_if(ns, [&](const Node &) { return *it++; });
 		}
 		{
 			auto &ns = graph.neighbors;
 			auto it = deleting.begin();
-			ns.erase(std::remove_if(ns.begin(), ns.end(), [&](const FlatSet<uint32> &) { return *it++; }), ns.end());
+			std::erase_if(ns, [&](const FlatSet<uint32> &) { return *it++; });
 		}
 
 		graphValidationDebugOnly(graph);
