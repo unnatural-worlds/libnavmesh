@@ -1,5 +1,7 @@
 #include "navmesh.h"
 
+#include <cage-core/meshAlgorithms.h>
+
 namespace unnatural
 {
 	using namespace navoptim;
