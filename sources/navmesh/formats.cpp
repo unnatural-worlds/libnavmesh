@@ -33,40 +33,42 @@ namespace navoptim
 		// indices
 		switch (poly->type())
 		{
-		case MeshTypeEnum::Triangles:
-		{
-			const uint32 tc = poly->indicesCount() / 3;
-			const auto inds = poly->indices();
-			for (uint32 i = 0; i < tc; i++)
+			case MeshTypeEnum::Triangles:
 			{
-				const uint32 a = inds[i * 3 + 0];
-				const uint32 b = inds[i * 3 + 1];
-				const uint32 c = inds[i * 3 + 2];
-				auto &na = res.neighbors[a];
-				auto &nb = res.neighbors[b];
-				auto &nc = res.neighbors[c];
-				na.insert(b);
-				na.insert(c);
-				nb.insert(a);
-				nb.insert(c);
-				nc.insert(a);
-				nc.insert(b);
+				const uint32 tc = poly->indicesCount() / 3;
+				const auto inds = poly->indices();
+				for (uint32 i = 0; i < tc; i++)
+				{
+					const uint32 a = inds[i * 3 + 0];
+					const uint32 b = inds[i * 3 + 1];
+					const uint32 c = inds[i * 3 + 2];
+					auto &na = res.neighbors[a];
+					auto &nb = res.neighbors[b];
+					auto &nc = res.neighbors[c];
+					na.insert(b);
+					na.insert(c);
+					nb.insert(a);
+					nb.insert(c);
+					nc.insert(a);
+					nc.insert(b);
+				}
 			}
-		} break;
-		case MeshTypeEnum::Lines:
-		{
-			const uint32 lc = poly->indicesCount() / 2;
-			const auto inds = poly->indices();
-			for (uint32 i = 0; i < lc; i++)
+			break;
+			case MeshTypeEnum::Lines:
 			{
-				const uint32 a = inds[i * 2 + 0];
-				const uint32 b = inds[i * 2 + 1];
-				res.neighbors[a].insert(b);
-				res.neighbors[b].insert(a);
+				const uint32 lc = poly->indicesCount() / 2;
+				const auto inds = poly->indices();
+				for (uint32 i = 0; i < lc; i++)
+				{
+					const uint32 a = inds[i * 2 + 0];
+					const uint32 b = inds[i * 2 + 1];
+					res.neighbors[a].insert(b);
+					res.neighbors[b].insert(a);
+				}
 			}
-		} break;
-		default:
-			CAGE_THROW_ERROR(Exception, "unsupported mesh type");
+			break;
+			default:
+				CAGE_THROW_ERROR(Exception, "unsupported mesh type");
 		}
 
 		return res;

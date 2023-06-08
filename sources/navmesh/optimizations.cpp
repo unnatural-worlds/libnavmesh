@@ -3,8 +3,8 @@
 
 #include "navmesh.h"
 
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 namespace std
@@ -12,10 +12,7 @@ namespace std
 	template<>
 	struct hash<std::pair<cage::uint32, cage::uint32>>
 	{
-		size_t operator()(const std::pair<cage::uint32, cage::uint32> &x) const
-		{
-			return hash<cage::uint32>()(x.first) ^ hash<cage::uint32>()(x.first ^ x.second);
-		}
+		size_t operator()(const std::pair<cage::uint32, cage::uint32> &x) const { return hash<cage::uint32>()(x.first) ^ hash<cage::uint32>()(x.first ^ x.second); }
 	};
 }
 
@@ -131,8 +128,7 @@ namespace navoptim
 			std::vector<FlatSet<uint32>> nearby;
 			const uint32 count = numeric_cast<uint32>(graph.nodes.size());
 
-			Runner(Graph &graph) : graph(graph)
-			{}
+			Runner(Graph &graph) : graph(graph) {}
 
 			static Real springForce(Real x)
 			{
@@ -370,8 +366,7 @@ namespace navoptim
 			std::unordered_set<std::pair<uint32, uint32>> deletions;
 			Holder<Mutex> mutex = newMutex();
 
-			Runner(Graph &graph) : graph(graph)
-			{}
+			Runner(Graph &graph) : graph(graph) {}
 
 			void operator()(uint32 invocation)
 			{
@@ -396,8 +391,8 @@ namespace navoptim
 							const Line rc = makeRay(a, c);
 							if (!rc.valid())
 								continue;
-							
-							if (dot(rb.direction, rc.direction) > 0.8191520442) 
+
+							if (dot(rb.direction, rc.direction) > 0.8191520442)
 							{
 								const uint32 n = distanceSquared(a, b) > distanceSquared(a, c) ? n1 : n2;
 								dels.emplace(min(n, index), max(n, index));

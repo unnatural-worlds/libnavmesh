@@ -12,15 +12,15 @@ namespace unnatural
 
 		switch (navigation->type())
 		{
-		case MeshTypeEnum::Triangles:
-		case MeshTypeEnum::Lines:
-			break;
-		default:
-			CAGE_THROW_ERROR(Exception, "unsupported mesh type");
+			case MeshTypeEnum::Triangles:
+			case MeshTypeEnum::Lines:
+				break;
+			default:
+				CAGE_THROW_ERROR(Exception, "unsupported mesh type");
 		}
 
 		Holder<Mesh> nav = navigation->copy();
-		
+
 		{
 			CAGE_LOG(SeverityEnum::Info, "libnavmesh", "merging close vertices");
 			MeshMergeCloseVerticesConfig cfg;
@@ -70,4 +70,3 @@ namespace unnatural
 		return nav;
 	}
 }
-
