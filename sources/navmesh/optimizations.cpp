@@ -1,11 +1,11 @@
-#include <cage-core/concurrent.h>
-#include <cage-core/tasks.h>
-
-#include "navmesh.h"
-
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+
+#include "navmesh.h"
+
+#include <cage-core/concurrent.h>
+#include <cage-core/tasks.h>
 
 namespace std
 {

@@ -1,6 +1,6 @@
-#include "navmesh.h"
-
 #include <set>
+
+#include "navmesh.h"
 
 namespace navoptim
 {
