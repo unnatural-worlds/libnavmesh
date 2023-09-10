@@ -20,8 +20,9 @@ namespace navoptim
 				n.normal = poly->normal(i);
 				if (hasUv)
 				{
-					n.terrain = numeric_cast<uint8>(poly->uv(i)[0] * 32);
-					n.border = poly->uv(i)[1] > 0.5;
+					const Vec2 uv = saturate(poly->uv(i));
+					n.terrain = numeric_cast<uint8>(uv[0] * 32);
+					n.border = uv[1] > 0.5;
 				}
 				res.nodes.push_back(n);
 			}
