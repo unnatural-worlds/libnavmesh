@@ -21,6 +21,8 @@ namespace navoptim
 	constexpr Real shortEdge = 0.55f;
 	constexpr Real longEdge = 1.3f;
 	constexpr Real longEdgeThreshold = 0.6f;
+	static_assert(longEdge > longEdgeThreshold * 2);
+	static_assert(longEdgeThreshold > shortEdge);
 
 	std::vector<uint32> sharedNeighbors(const Graph &graph, uint32 a, uint32 b)
 	{
@@ -117,7 +119,7 @@ namespace navoptim
 		CAGE_LOG(SeverityEnum::Info, "libnavmesh", Stringizer() + "borders count: " + index);
 	}
 
-	void optimizeNodePositions(Graph &graph)
+	void optimizeNodePositions(Graph &graph, Real factor)
 	{
 		CAGE_LOG(SeverityEnum::Info, "libnavmesh", "optimizing node positions");
 
@@ -127,8 +129,9 @@ namespace navoptim
 			std::vector<Vec3> forces;
 			std::vector<FlatSet<uint32>> nearby;
 			const uint32 count = numeric_cast<uint32>(graph.nodes.size());
+			Real factor;
 
-			Runner(Graph &graph) : graph(graph) {}
+			Runner(Graph &graph, Real factor) : graph(graph), factor(factor) {}
 
 			static Real springForce(Real x)
 			{
@@ -186,17 +189,57 @@ namespace navoptim
 
 					// apply the forces
 					for (uint32 a = 0; a < count; a++)
-						graph.nodes[a].position += forces[a] * 0.015;
+						graph.nodes[a].position += forces[a] * 0.015 * factor;
 				}
 			}
 		};
 
 		{
-			Runner runner(graph);
+			Runner runner(graph, factor);
 			runner.run();
 		}
 
 		graphValidationDebugOnly(graph);
+	}
+
+	void snapNodesToCollider(Graph &graph, const Collider *collider, Real tileSize)
+	{
+		if (!collider)
+			return;
+
+		CAGE_LOG(SeverityEnum::Info, "libnavmesh", "snapping nodes to collider");
+
+		struct Runner
+		{
+			Graph &graph;
+			const Collider *collider;
+			Real tileSize;
+
+			Runner(Graph &graph, const Collider *collider, Real tileSize) : graph(graph), collider(collider), tileSize(tileSize) {}
+
+			void operator()(uint32 invocation)
+			{
+				const auto range = tasksSplit(invocation, processorsCount(), numeric_cast<uint32>(graph.nodes.size()));
+				for (uint32 index = range.first; index < range.second; index++)
+				{
+					const Vec3 a = graph.nodes[index].position;
+					const Vec3 n = graph.nodes[index].normal;
+					const Line l = makeSegment(a - n, a + n);
+					const Vec3 p = intersection(l, collider, Transform({}, {}, 1 / tileSize));
+					if (valid(p))
+						graph.nodes[index].position = p;
+					else if (!graph.nodes[index].border) // border nodes may extend slightly outside the collider
+						CAGE_LOG(SeverityEnum::Warning, "libnavmesh", Stringizer() + "node " + (a * tileSize) + " could not snap to collider");
+				}
+			}
+
+			void run() { tasksRunBlocking<Runner>("snapping nodes to collider", *this, processorsCount()); }
+		};
+
+		{
+			Runner runner(graph, collider, tileSize);
+			runner.run();
+		}
 	}
 
 	void addNeighborEdges(Graph &graph)
@@ -239,8 +282,7 @@ namespace navoptim
 		for (uint32 a = 0; a < initialNodesCount; a++)
 		{
 			const Vec3 &ap = graph.nodes[a].position;
-			const FlatSet<uint32> &aNs = graph.neighbors[a];
-			for (uint32 b : aNs)
+			for (uint32 b : graph.neighbors[a])
 			{
 				if (a >= b)
 					continue;
@@ -249,7 +291,7 @@ namespace navoptim
 					continue;
 				const Vec3 mp = (ap + bp) * 0.5;
 				bool ok = true;
-				for (uint32 c : aNs)
+				for (uint32 c : graph.neighbors[a])
 				{
 					if (distanceSquared(mp, graph.nodes[c].position) < sqr(longEdgeThreshold))
 					{
@@ -300,6 +342,12 @@ namespace navoptim
 			}
 		}
 
+		for (const auto &it : additions)
+		{
+			graph.neighbors[it.first].erase(it.second);
+			graph.neighbors[it.second].erase(it.first);
+		}
+
 		graphValidationDebugOnly(graph);
 		CAGE_LOG(SeverityEnum::Info, "libnavmesh", Stringizer() + "nodes count: " + graph.nodes.size() + " (was " + initialNodesCount + ")");
 	}
@@ -328,7 +376,7 @@ namespace navoptim
 		for (auto &it : joins)
 		{
 			while (joins.count(it.second) > 0)
-				it.second = joins[it.second]; // is this guaranteed to finish??
+				it.second = joins[it.second];
 		}
 
 		// all edges going to or from A are replaced to go to or from B
@@ -446,7 +494,7 @@ namespace navoptim
 			Real bestDist = Real::Infinity();
 			for (const auto &on : res)
 			{
-				Real d = distanceSquared(original.nodes.at(on).position, it->position);
+				const Real d = distanceSquared(original.nodes.at(on).position, it->position);
 				if (d < bestDist)
 				{
 					bestDist = d;

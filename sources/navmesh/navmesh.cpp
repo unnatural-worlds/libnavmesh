@@ -6,11 +6,13 @@ namespace unnatural
 {
 	using namespace navoptim;
 
-	Holder<Mesh> navmeshOptimize(const Holder<Mesh> &navigation, const NavmeshOptimizeConfig &config)
+	Holder<Mesh> navmeshOptimize(NavmeshOptimizeConfig &config)
 	{
 		CAGE_LOG(SeverityEnum::Info, "libnavmesh", "initiating navigation optimization");
 
-		switch (navigation->type())
+		Holder<Mesh> nav = config.navigation->copy();
+
+		switch (nav->type())
 		{
 			case MeshTypeEnum::Triangles:
 			case MeshTypeEnum::Lines:
@@ -18,8 +20,6 @@ namespace unnatural
 			default:
 				CAGE_THROW_ERROR(Exception, "unsupported mesh type");
 		}
-
-		Holder<Mesh> nav = navigation->copy();
 
 		{
 			CAGE_LOG(SeverityEnum::Info, "libnavmesh", "merging close vertices");
@@ -55,11 +55,20 @@ namespace unnatural
 		for (uint32 iteration = 0; iteration < config.iterations; iteration++)
 		{
 			CAGE_LOG(SeverityEnum::Info, "libnavmesh", Stringizer() + "navmesh optimizing iteration: " + iteration);
-			optimizeNodePositions(graph);
+			optimizeNodePositions(graph, 1);
+			snapNodesToCollider(graph, +config.collider, config.tileSize);
 			addNeighborEdges(graph);
 			splitLongEdges(graph);
 			joinCloseNodes(graph);
 			removeSuboptimalEdges(graph);
+			updateNodeProperties(graph, original);
+			printStatistics(graph);
+		}
+
+		{
+			CAGE_LOG(SeverityEnum::Info, "libnavmesh", "final round");
+			optimizeNodePositions(graph, 0.5);
+			snapNodesToCollider(graph, +config.collider, config.tileSize);
 			updateNodeProperties(graph, original);
 			printStatistics(graph);
 		}

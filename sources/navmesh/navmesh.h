@@ -49,7 +49,8 @@ namespace navoptim
 
 	void markBorderNodes(Graph &graph);
 
-	void optimizeNodePositions(Graph &graph);
+	void optimizeNodePositions(Graph &graph, Real factor);
+	void snapNodesToCollider(Graph &graph, const Collider *collider, Real tileSize);
 	void addNeighborEdges(Graph &graph);
 	void splitLongEdges(Graph &graph);
 	void joinCloseNodes(Graph &graph);
