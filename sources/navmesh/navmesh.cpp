@@ -40,6 +40,9 @@ namespace unnatural
 			cfg.targetEdgeLength = config.tileSize;
 			cfg.iterations = 10;
 			meshRegularize(+nav, cfg);
+#if 0
+			nav->exportFile("initial-regularized-navmesh.obj");
+#endif
 			graph = convertMeshToGraph(+nav, config.tileSize);
 			graphValidationDebugOnly(graph);
 			printStatistics(graph);

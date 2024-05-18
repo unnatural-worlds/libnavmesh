@@ -11,7 +11,7 @@ namespace unnatural
 	struct NavmeshOptimizeConfig
 	{
 		const Mesh *navigation = nullptr;
-		const Collider *collider = nullptr;
+		const Collider *collider = nullptr; // optional
 		Real tileSize = 10; // the goal, by default, is that average distance between any two neighbor tiles is 10 meters
 		uint32 iterations = 20;
 		bool pmpRegularization = true;

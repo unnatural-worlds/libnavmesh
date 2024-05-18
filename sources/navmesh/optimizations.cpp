@@ -1,3 +1,4 @@
+#include <atomic>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -214,11 +215,13 @@ namespace navoptim
 			Graph &graph;
 			const Collider *collider;
 			Real tileSize;
+			std::atomic<uint32> warnings = 0;
 
 			Runner(Graph &graph, const Collider *collider, Real tileSize) : graph(graph), collider(collider), tileSize(tileSize) {}
 
 			void operator()(uint32 invocation)
 			{
+				uint32 warn = 0;
 				const auto range = tasksSplit(invocation, processorsCount(), numeric_cast<uint32>(graph.nodes.size()));
 				for (uint32 index = range.first; index < range.second; index++)
 				{
@@ -229,8 +232,9 @@ namespace navoptim
 					if (valid(p))
 						graph.nodes[index].position = p;
 					else if (!graph.nodes[index].border) // border nodes may extend slightly outside the collider
-						CAGE_LOG(SeverityEnum::Warning, "libnavmesh", Stringizer() + "node " + (a * tileSize) + " could not snap to collider");
+						warn++;
 				}
+				warnings += warn;
 			}
 
 			void run() { tasksRunBlocking<Runner>("snapping nodes to collider", *this, processorsCount()); }
@@ -239,6 +243,8 @@ namespace navoptim
 		{
 			Runner runner(graph, collider, tileSize);
 			runner.run();
+			if (runner.warnings > 0)
+				CAGE_LOG(SeverityEnum::Warning, "libnavmesh", Stringizer() + (uint32)runner.warnings + " nodes could not snap to collider");
 		}
 	}
 
@@ -484,12 +490,16 @@ namespace navoptim
 
 	void updateNodeProperties(Graph &graph, const SpatialGraph &original)
 	{
+		CAGE_LOG(SeverityEnum::Info, "libnavmesh", "updating node properties");
 		for (const auto &it : enumerate(graph.nodes))
 		{
 			original.spatialQuery->intersection(Sphere(it->position, 3));
 			const auto &res = original.spatialQuery->result();
 			if (res.size() == 0)
+			{
+				CAGE_LOG_THROW(Stringizer() + "position: " + it->position);
 				CAGE_THROW_ERROR(Exception, "navigation node too far from any original vertex");
+			}
 			uint32 bestIndex = m;
 			Real bestDist = Real::Infinity();
 			for (const auto &on : res)
